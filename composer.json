@@ -3,7 +3,8 @@
     "description": "Upload files to an elouent model and assign them in the database",
     "type": "library",
     "require": {
-        "smottt/wideimage": "^1.1"
+        "smottt/wideimage": "^1.1",
+        "zoomyboy/helpers": ">=1.0.4"
     },
     "authors": [
         {
@@ -12,6 +13,6 @@
         }
     ],
 	"autoload": {
-		"files": ["file-upload.php"]
+		"files": ["FileUpload.php"]
 	}
 }
