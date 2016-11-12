@@ -3,10 +3,12 @@
 namespace Zoomyboy\FileUpload;
 
 use Zoomyboy\Helpers\ConfigHelper;
+use WideImage\WideImage;
 
 class FileUploadService {
 	private $config;
 	private $model;
+	private $file;
 
 	/**
 	 * FileUploadService Constructor
@@ -14,25 +16,18 @@ class FileUploadService {
 	 * @param array|string $config The configuration from the model
 	 * @param string $file The file - relative to saving directory
 	 */
-	public function __construct($config, $model) {
+	public function __construct($config, $model, $file) {
 		$this->config = new ConfigHelper($config);
 		$this->model = $model;
+		$this->file = $file;
 		return $this;
 	}
 
-	public function saveFile($file) {
-		$info = pathinfo($file->getClientOriginalName());
-
-		$file->move($this->getBaseImagePath(), $this->getFilename($file));
+	public function saveFile($fileResource) {
+		$fileResource->move($this->getBaseImagePath(), $this->getFilename());
 		$this->createThumbnails();
 
-		return buildPath($this->getBaseImagePath(), $this->getFilename($file));
-	}
-
-	public static function getImageVersionFileUrl($config, $model, $versionName) {
-		$config = new ConfigHelper($config);
-		$file = $model->{$config->path};
-		return url(buildPath($config->path, buildFilename($model->id.'_'.$versionName, $file)));
+		return buildPath($this->getBaseImagePath(), $this->getFilename());
 	}
 
 	/**
@@ -44,24 +39,33 @@ class FileUploadService {
 		return base_path(rtrim($this->config->path, '/')) . '/';
 	}
 
+	public function getVersionUrl($versionName) {
+		foreach($this->config->versions as $version) {
+			$version = new ConfigHelper(cssOrArray($version));
+			if ($version->name == $versionName) {
+				return url(buildPath(str_replace('public', '', $this->config->path), $this->getVersionFilename($version)));
+			}
+		}
+	}
+
 	/**
 	 * Gets the Filename of the Image in original size
 	 *
 	 * @return string
 	 */
-	private function getFilename($file) {
-		return buildFilename($this->model->id, $file->getClientOriginalName());
+	private function getFilename() {
+		return buildFilename($this->model->id, $this->file);
 	}
 
 	/**
 	 * Gets name of the file with given version
 	 *
-	 * @param Zoomyboy\Helpers\ConfigHelper $version Version information
+	 * @param string|Array $version Version information
 	 *
 	 * @return string
 	 */
 	private function getVersionFilename($version) {
-		return getFilename($this->model->id.'_'.$version->name, $this->getFilename($file));
+		return buildFilename($this->model->id.'_'.$version->name, $this->getFilename());
 	}
 
 	/**
@@ -71,28 +75,27 @@ class FileUploadService {
 		$file = buildPath($this->getBaseImagePath(), $this->getFilename());
 
 		foreach($this->config->versions as $version) {
+			$version = new ConfigHelper(cssOrArray($version));
+
 			$newFile = buildPath($this->getBaseImagePath(), $this->getVersionFilename($version));
 			copy($file, $newFile);
-			$img = WideImage::load($newFile);
 
 			$originalSize = getimagesize($file);
 			$svh = $originalSize[0] / $originalSize[1];
 
-			if (!$version->width) {$version->width = getWidth($version->height, $svh);}
-			if (!$version->height) {$version->height = getHeight($version->width, $svh);}
+			if (!$version->width) {$version->width = getImageWidth($version->height, $svh);}
+			if (!$version->height) {$version->height = getImageHeight($version->width, $svh);}
 
 			switch($version->size) {
 				case 'contain': $resizeMode = 'inside'; break;
 				case 'fill': $resizeMode = 'fill'; break;
 				case 'cover': $resizeMode = 'outside'; break;
 			}
-			$img->resize($width, $height, $resizeMode, 'any');
+			WideImage::load($newFile)->resize($version->width, $version->height, $resizeMode, 'any')->saveToFile($newFile);
 
 			if ($version->size == 'cover') {
-				$img->crop("center", "middle", $width, $height);
+				WideImage::load($newFile)->crop("center", "middle", $version->width, $version->height)->saveToFile($newFile);
 			}
-
-			$img->saveToPath($newFile);
 		}
 	}
 

@@ -8,31 +8,25 @@ use Intervention\Image\ImageManagerStatic as Image;
 
 trait FileUpload {
 	/**
-	 * @var string $imageColumn Column Name in the model where to save the image path.
-	 *                          Should be of type 'string' or 'text'.
-	 *                          Should be a fillable attribute or a accessor (setter)
-	 */
-	private $imageColumn = 'image';
-
-	/**
 	 * Save uploaded file to disk and create file versions
 	 *
 	 * @param \Symfony\Component\HttpFoundation\File\UploadedFile $file The file instance from upload, with field name!
-	 *
-	 * @return string Complete filename to uploaded original image
 	 */
 	public function saveFile($file) {
-		$service = new FileUploadService($this->fileUpload, $this, $file);
-		$path = $service->saveFile();
+		if(!property_exists($this, 'fileUpload')) {throw new FileUploadException("You should provide a configuration to your model!");}
 
-		$this->{$this->imageColumn} = $path;
+		$filename = $this->id . '.' . $file->getClientOriginalExtension();
+		$service = new FileUploadService($this->fileUpload, $this, $filename);
+		$service->saveFile($file);
+
+		$this->{$this->imageColumn} = $filename;
 		$this->save();
-
-		return $path; 
 	}
 
 	public function imageVersionUrl($versionName) {
-		return FileUploadService::getImageVersionFileUrl($this->fileUpload, $this, $versionName);
+		$filename = $this->{$this->imageColumn};
+		$service = new FileUploadService($this->fileUpload, $this, $filename);
+		return $service->getVersionUrl($versionName);
 	}
 
 	/**
