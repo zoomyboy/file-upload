@@ -13,6 +13,6 @@
         }
     ],
 	"autoload": {
-		"files": ["FileUpload.php"]
+		"files": ["FileUpload.php", "FileUploadService.php"]
 	}
 }
