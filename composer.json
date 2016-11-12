@@ -1,0 +1,17 @@
+{
+    "name": "zoomyboy/file-upload",
+    "description": "Upload files to an elouent model and assign them in the database",
+    "type": "library",
+    "require": {
+        "smottt/wideimage": "^1.1"
+    },
+    "authors": [
+        {
+            "name": "Philipp Lang",
+            "email": "pille@zoomyboy.de"
+        }
+    ],
+	"autoload": {
+		"files": ["file-upload.php"]
+	}
+}
