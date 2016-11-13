@@ -25,8 +25,12 @@ trait FileUpload {
 
 	public function imageVersionUrl($versionName) {
 		$filename = $this->{$this->imageColumn};
-		$service = new FileUploadService($this->fileUpload, $this, $filename);
-		return $service->getVersionUrl($versionName);
+		if ($filename != '')  {
+			$service = new FileUploadService($this->fileUpload, $this, $filename);
+			return $service->getVersionUrl($versionName);
+		} else {
+			return false;
+		}
 	}
 
 	/**
@@ -48,6 +52,26 @@ trait FileUpload {
 
 			foreach ($this->versions as $versionName => $versionParams) {
 				@unlink($this->getVersionFile($filenameBase, $versionName));
+			}
+		}
+	}
+
+	public function __get($value) {
+		if (strstr($value, 'Url') === false) {
+			return parent::__get($value);
+		} else {
+			$service = new FileUploadService($this->fileUpload, $this, $this->{$this->imageColumn});
+			$versionName = strtolower(str_replace($this->imageColumn, '', str_replace('Url', '', $value)));
+			$version = $service->getVersionFromName($versionName);
+
+			if ($version != null) {
+				if ($this->imageVersionUrl($versionName)) {
+					return $this->imageVersionUrl($versionName);
+				} else {
+					return url(str_replace('public', '', $this->fileUpload['default']));
+				}
+			} else {
+				return '';
 			}
 		}
 	}
