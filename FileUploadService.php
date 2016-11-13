@@ -114,6 +114,10 @@ class FileUploadService {
 	}
 
 	public function unlinkImages() {
-		
+		foreach($this->config['versions'] as $version) {
+			$version = cssOrArray($version);
+			@unlink(buildPath($this->getBaseImagePath(), $this->getVersionFilename($version)));
+		}
+		@unlink(buildPath($this->getBaseImagePath(), $this->getFilename()));
 	}
 }

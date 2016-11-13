@@ -40,19 +40,15 @@ trait FileUpload {
 	 *
 	 * @return void
 	 */
-	public function unlinkImages() {
+	public function unlink() {
 		if (isset($this->{$this->imageColumn}) && $this->{$this->imageColumn} != '') {
-			$this->setConfig();
+			$service = new FileUploadService($this->fileUpload, $this, $this->{$this->imageColumn});
+			$service->unlinkImages();
 
-			@unlink(base_path($this->{$this->imageCol}));
+			$this->{$this->imageColumn} = '';
+			$this->save();
 
-			$filename = str_replace($this->imagePath, '', $this->{$this->imageCol});
-
-			$filenameBase = pathinfo($filename, PATHINFO_BASENAME);
-
-			foreach ($this->versions as $versionName => $versionParams) {
-				@unlink($this->getVersionFile($filenameBase, $versionName));
-			}
+			return '[]';
 		}
 	}
 
