@@ -13,6 +13,8 @@
         }
     ],
 	"autoload": {
-		"files": ["FileUpload.php", "FileUploadService.php", "FileUploadException.php"]
+        "psr-4": {
+            "Zoomyboy\\FileUpload\\": "src/"
+        }
 	}
 }
