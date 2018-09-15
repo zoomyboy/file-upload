@@ -25,6 +25,7 @@
                     Datei auswählen…
                 </v-btn>
                 <input type="file" ref="uploader" @change="pushToQueue()" style="display: none;" :multiple="multiple" />
+                <canvas ref="resizer" v-if="resize" :width="resizeWidth" :height="resizeHeight" style="border: 1px solid black;"></canvas>
             </v-flex>
         </v-layout>
     </v-container>
@@ -35,8 +36,15 @@
         display: none;
     }
 
+    canvas {
+        display: none;
+    }
+
     img {
         max-width: 100%;
+        margin: 0 auto;
+        display: block;
+        margin-bottom: 10px;
     }
 </style>
 
@@ -54,6 +62,9 @@
                 default: function() {
                     return {image: null};
                 }
+            },
+            resize: {
+                default: null
             }
         },
         methods: {
@@ -87,9 +98,48 @@
                 }
 
                 var reader = new FileReader();
-                reader.onload = function(e) {
-                    vm.value.image.src = e.target.result;
+                reader.onload = () => {
+                    if (this.resize) {
+                        var resizer = this.$refs.resizer.getContext('2d');
+
+                        var bigImage = new Image();
+                        bigImage.src = reader.result;
+
+                        bigImage.onload = () => {
+                            var svhSrc = bigImage.width / bigImage.height;
+                            var svhDest = this.resizeWidth / this.resizeHeight;
+
+                            if (svhDest < svhSrc) {
+                                var h = bigImage.height;
+                                var w = svhDest * bigImage.height;
+                                var x = (bigImage.width - w) / 2;
+                                var y = 0;
+                            } else {
+                                w = bigImage.width;
+                                h = bigImage.width / svhDest;
+                                y = (bigImage.height - h) / 2;
+                                x = 0;
+                            }
+
+                            resizer.drawImage(bigImage,
+                                x, y,
+                                w, h,
+                                0, 0,
+                                this.resizeWidth, this.resizeHeight
+                            );
+
+                            vm.value.image.src = this.$refs.resizer.toDataURL();
+
+                            var xhr = new FormData();
+                            var req = new XMLHttpRequest();
+                            req.open('POST', '/zoomyboy/file-upload');
+                            req.send(xhr);
+                        };
+                    } else {
+                        vm.value.image.src = reader.result;
+                    }
                 };
+
                 reader.readAsDataURL(file);
             }
         },
@@ -104,6 +154,20 @@
                 }
 
                 return this.value.image ? [this.value.image] : [];
+            },
+            resizeWidth() {
+                if (!this.resize) {
+                    return 0;
+                }
+
+                return this.resize[0];
+            },
+            resizeHeight() {
+                if (!this.resize) {
+                    return 0;
+                }
+
+                return this.resize[1];
             }
         }
     }
