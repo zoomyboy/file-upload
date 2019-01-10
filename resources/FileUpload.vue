@@ -1,52 +1,38 @@
 <template>
-    <v-container fluid class="pa-0">
-        <v-layout row wrap>
-            <v-flex sm12>
-                <h3 v-if="label" class="subheading">{{ label }}</h3>
-            </v-flex>
-            <v-flex v-for="(image, index) in images" :key="index" sm6 md3>
-                <v-card>
-                    <img :src="image.src">
-                    <v-card-title>
-                        <div class="subheading">{{ image.filename }}</div>
-                    </v-card-title>
-                    <v-card-title>
-                        <div class="caption">{{ size(image.size) }}</div>
-                    </v-card-title>
-                </v-card>
-            </v-flex>
-            <v-flex sm12>
-                <v-btn @click="openDialog()"
-                    color="primary"
-                    class="ma-0"
-                    small
-                    dark
-                >
-                    Datei auswählen…
-                </v-btn>
-                <input type="file" ref="uploader" @change="pushToQueue()" style="display: none;" :multiple="multiple" />
-                <canvas ref="resizer" v-if="resize" :width="resizeWidth" :height="resizeHeight" style="border: 1px solid black;"></canvas>
-            </v-flex>
-        </v-layout>
-    </v-container>
+    <div>
+        <div>
+            <div class="tw-flex-nogrow tw-text-lg tw-text-grey-darker tw-mb-1 tw-font-narrow tw-uppercase">
+                <slot></slot>
+            </div>
+        </div>
+
+        <div class="tw-flex tw-flex-wrap">
+            <div v-for="(image, index) in this.value" :key="index" class="tw-w-1/5">
+                <img :src="image.src">
+
+                <footer>
+                    <span>{{ image.filename }}</span>
+                    <span>{{ size(image.size) }}</span>
+                </footer>
+            </div>
+
+            <div class="tw-flex-grow tw-w-full tw-mt-2">
+                <button type="button" class="
+                        tw-px-3 tw-py-2
+                        tw-bg-primary-light hover:tw-bg-primary-lighter
+                        tw-flex-nogrow
+                        tw-text-white tw-uppercase tw-no-underline hover:tw-bg-primary-light
+                        tw-inline-block
+                    "
+                    @click="openDialog()"
+                >Datei auswählen…</button>
+            </div>
+
+            <input type="file" ref="uploader" @change="pushToQueue()" :multiple="multiple" class="tw-hidden" />
+            <canvas ref="resizer" v-if="resize" :width="resizeWidth" :height="resizeHeight"></canvas>
+        </div>
+    </div>
 </template>
-
-<style lang="scss" scoped>
-    input[type="file"] {
-        display: none;
-    }
-
-    canvas {
-        display: none;
-    }
-
-    img {
-        max-width: 100%;
-        margin: 0 auto;
-        display: block;
-        margin-bottom: 10px;
-    }
-</style>
 
 <script>
 
@@ -60,12 +46,17 @@
             },
             value: {
                 default: function() {
-                    return {image: null};
+                    return null;
                 }
             },
             resize: {
                 default: null
             }
+        },
+        data: function() {
+            return {
+                images: []
+            };
         },
         methods: {
             openDialog() {
@@ -83,22 +74,16 @@
             upload(file) {
                 var vm = this;
 
-                if (this.multiple) {
-                    this.value.images.push[{
-                        filename: file.name,
-                        size: file.size,
-                        src: null
-                    }];
-                } else {
-                    this.$set(this.value, 'image', {
-                        filename: file.name,
-                        size: file.size,
-                        src: null
-                    });
-                }
-
                 var reader = new FileReader();
+
+                var model = {
+                    filename: file.name,
+                    size: file.size,
+                    src: null
+                };
+
                 reader.onload = () => {
+
                     if (this.resize) {
                         var resizer = this.$refs.resizer.getContext('2d');
 
@@ -127,16 +112,27 @@
                                 0, 0,
                                 this.resizeWidth, this.resizeHeight
                             );
-
-                            vm.value.image.src = this.$refs.resizer.toDataURL();
-
-                            var xhr = new FormData();
-                            var req = new XMLHttpRequest();
-                            req.open('POST', '/zoomyboy/file-upload');
-                            req.send(xhr);
+                            model.src = this.$refs.resizer.toDataURL();
                         };
                     } else {
-                        vm.value.image.src = reader.result;
+                        model.src = reader.result;
+
+                        var formData = new FormData();
+                        formData.append('file', file);
+                        var req = new XMLHttpRequest();
+                        req.open('POST', '/api/fileupload', true);
+                        req.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                        req.setRequestHeader('X-CSRF-TOKEN', document.head.querySelector('meta[name="csrf-token"]').content);
+
+                        req.onload = () => {
+                            if (req.status != 200) {return;}
+
+                            model.tempName = JSON.parse(req.response).filename;
+                            this.value.push(model);
+                            this.$emit('input', this.value);
+                        };
+
+                        req.send(formData);
                     }
                 };
 
@@ -144,17 +140,6 @@
             }
         },
         computed: {
-            images() {
-                if (typeof this.value.image == "undefined" && typeof this.value.images == "undefined") {
-                    return [];
-                }
-
-                if (this.multiple) {
-                    return this.value.images || [];
-                }
-
-                return this.value.image ? [this.value.image] : [];
-            },
             resizeWidth() {
                 if (!this.resize) {
                     return 0;
