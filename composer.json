@@ -2,6 +2,7 @@
     "name": "zoomyboy/file-upload",
     "description": "Upload files to an elouent model and assign them in the database",
     "type": "library",
+    "version": "dev-master",
     "require": {
         "smottt/wideimage": "^1.1",
         "zoomyboy/helpers": ">=1.0.4"
